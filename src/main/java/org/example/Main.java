@@ -1,86 +1,78 @@
 package org.example;
 
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 
-import javax.swing.text.Document;
-import javax.xml.parsers.DocumentBuilder;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class Main {
     public static void main(String[] args) {
-        File finalFile = new File("1.docx");
-        FileInputStream finalFis;
-        XWPFDocument finalDocument;
-        String finalDocumentLine ="";
-        XWPFWordExtractor finalExtractor;
-        StringBuffer s = new StringBuffer();
-        //получить все файлы
-        // из каждого файла импортировать в последний
-        File file;
-        FileInputStream fis;
-        XWPFDocument document;
-        String documentLine ="";
-        XWPFWordExtractor extractor;
-        List<Path> list = null;
-        try {
-            finalFis = new FileInputStream(finalFile.getAbsolutePath());
-            finalDocument = new XWPFDocument(finalFis); // Вот и объект описанного нами класса
+        String spath = "src/main/resources/Files";//путь где лежат файлы
+        String starget = "target.docx";//куда сохранить и как назвать файл
 
+        XWPFDocument targetFile = null;
+        Path path = Path.of(spath);
+        Path target = Path.of(starget);
 
-            finalExtractor = new XWPFWordExtractor(finalDocument);
-            finalDocumentLine = finalDocument.getDocument().toString();
-            //System.out.println(finalExtractor.getText());
-        } catch (FileNotFoundException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        List<Path> listOfFilesPathsDocx = getListOfFiles(path);//готов
 
-        try {
-            Path path = Path.of("C:\\Users\\33\\IdeaProjects\\GetterTextFromDocx\\src\\main\\resources");
-            list = Files.walk(path).filter(p -> p != path && p.toFile().isFile()).collect(Collectors.toList());
-        } catch (IOException e) {
-            // TODO implement better exception handling
-            e.printStackTrace();
-        }
-        System.out.println(list);
+        targetFile = getFileFromPaths(listOfFilesPathsDocx);
 
-        for (Path l:list) {
-            if (l.toString().toLowerCase().endsWith("docx")){
-            file = l.toFile();
-            try {
-                fis = new FileInputStream(file.getAbsolutePath());
-                document = new XWPFDocument(fis); // Вот и объект описанного нами класса
-                extractor = new XWPFWordExtractor(document);
-                documentLine = document.getDocument().toString();
-                //System.out.println(extractor.getText());
-                s.append(extractor.getText());
-                //XWPFDocument documentNew = new XWPFDocument(fis);
-                //documentNew.getDocument().toString();
-
-                //пишет в txt
-
-
-            }catch(IOException e){
-                System.out.println("something goes wrong");
-            }
-
-        }}
-
-
-        try {
-            BufferedWriter writer = new BufferedWriter(new FileWriter("Im tough.txt"));
-            writer.write(s.toString());
-            writer.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        System.out.println(s);
+        saveTargetFile(targetFile,target);
     }
+
+    private static void saveTargetFile(XWPFDocument targetFile, Path pathToSave) {
+        try {
+            targetFile.write(new FileOutputStream(new File(pathToSave.toAbsolutePath().toUri())) );
+            targetFile.close();
+            System.out.println("Saved");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
+    }
+
+    private static XWPFDocument getFileFromPaths(List<Path> listOfFilesPathsDocx) {
+        XWPFDocument resultFile = new XWPFDocument();
+        XWPFDocument docx = null;
+        for (Path p:listOfFilesPathsDocx) {
+            try {
+                docx=new XWPFDocument(new FileInputStream(p.toFile()));
+                resultFile.getDocument().addNewBody().set(docx.getDocument().getBody());
+            } catch (IOException  e) {
+                throw new RuntimeException(e);
+            }
+        }
+        System.out.println("file is ready with "+listOfFilesPathsDocx.size());
+        return resultFile;
+        }
+
+
+    private static List getListOfFiles(Path pathOfFiles) {
+        //лист с файлами в этом пути
+        List list =null;
+        try {
+             list = Files.walk(pathOfFiles)
+                    .filter(path ->path.toFile().isFile()
+                            &&path.toFile().toString().endsWith(".docx"))
+                    .toList();
+//                    .sort // разобраться как отсортировать файлы по алфавиту, по дате изменения
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (list!=null){
+            System.out.println("GetListOFFiles() ready");
+            return list;
+        }else {
+            System.out.println("GetListOFFiles() empty list");
+            return new ArrayList<>();
+        }
+
+    }
+
 }
